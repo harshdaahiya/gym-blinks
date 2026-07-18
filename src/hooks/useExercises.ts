@@ -6,21 +6,29 @@
  */
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
-import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { onSnapshot, query, orderBy, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { FIRESTORE_COLLECTIONS, getUserCollection, getUserDoc } from "@/lib/firestore-collections";
 import { Exercise } from "@/types/exercise";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * @description Custom hook for exercises data synchronization and mutation.
  * @returns {Object} Exercises array, loading state, and CRUD helper methods.
  */
 export function useExercises() {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   const [exercisesList, setExercisesList] = useState<Exercise[]>([]);
   const [loadingState, setLoadingState] = useState<boolean>(true);
 
   useEffect(() => {
-    const exercisesCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.EXERCISES);
+    if (!userId) {
+      setLoadingState(false);
+      return;
+    }
+
+    const exercisesCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.EXERCISES);
     const sortedExercisesQuery = query(exercisesCollection, orderBy("createdAt", "desc"));
 
     const unsubscribeFromExercises = onSnapshot(sortedExercisesQuery, (querySnapshot) => {
@@ -36,7 +44,7 @@ export function useExercises() {
     });
 
     return () => unsubscribeFromExercises();
-  }, []);
+  }, [userId]);
 
   /**
    * @description Adds a new exercise.
@@ -46,8 +54,9 @@ export function useExercises() {
    * @throws {Error} Throws if writing to Firestore fails.
    */
   const addExercise = async (exerciseName: string, targetDayId: string): Promise<string> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const exercisesCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.EXERCISES);
+      const exercisesCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.EXERCISES);
       const newDocReference = await addDoc(exercisesCollection, {
         name: exerciseName.trim(),
         dayId: targetDayId,
@@ -74,8 +83,9 @@ export function useExercises() {
     updatedName: string,
     updatedDayId: string
   ): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const exerciseDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
+      const exerciseDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
       await updateDoc(exerciseDocReference, {
         name: updatedName.trim(),
         dayId: updatedDayId,
@@ -93,8 +103,9 @@ export function useExercises() {
    * @throws {Error} Throws if archiving in Firestore fails.
    */
   const archiveExercise = async (exerciseId: string): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const exerciseDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
+      const exerciseDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
       await updateDoc(exerciseDocReference, {
         archived: true,
       });
@@ -111,8 +122,9 @@ export function useExercises() {
    * @throws {Error} Throws if updating Firestore fails.
    */
   const restoreExercise = async (exerciseId: string): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const exerciseDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
+      const exerciseDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.EXERCISES, exerciseId);
       await updateDoc(exerciseDocReference, {
         archived: false,
       });

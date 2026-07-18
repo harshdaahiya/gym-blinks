@@ -6,10 +6,10 @@
  */
 
 import { useState, useCallback } from "react";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { query, orderBy, limit, getDocs } from "firebase/firestore";
+import { FIRESTORE_COLLECTIONS, getUserCollection } from "@/lib/firestore-collections";
 import { WorkoutLog, SetEntry } from "@/types/workout-log";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Result structure for the last session fetch.
@@ -25,6 +25,8 @@ export interface LastSessionDetails {
  * @returns {Object} A set of utilities to fetch last session details for an exercise.
  */
 export function useLastSession() {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [loading, setLoading] = useState<boolean>(false);
 
   /**
@@ -33,9 +35,10 @@ export function useLastSession() {
    * @returns {Promise<LastSessionDetails | null>} Details of the last session, or null if never performed.
    */
   const fetchLastSession = useCallback(async (exerciseId: string): Promise<LastSessionDetails | null> => {
+    if (!userId) return null;
     setLoading(true);
     try {
-      const logsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
+      const logsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
       // Query all logs ordered by date desc
       const logsQuery = query(logsCollection, orderBy("date", "desc"), limit(20));
       const querySnapshot = await getDocs(logsQuery);
@@ -69,7 +72,7 @@ export function useLastSession() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   /**
    * @description Fetches the most recent workout log document matching the given dayId.
@@ -77,9 +80,10 @@ export function useLastSession() {
    * @returns {Promise<WorkoutLog | null>} The last workout log, or null if none logged yet.
    */
   const fetchLastWorkoutLogForDay = useCallback(async (dayId: string): Promise<WorkoutLog | null> => {
+    if (!userId) return null;
     setLoading(true);
     try {
-      const logsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
+      const logsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
       const logsQuery = query(logsCollection, orderBy("date", "desc"), limit(20));
       const querySnapshot = await getDocs(logsQuery);
 
@@ -106,7 +110,7 @@ export function useLastSession() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   return {
     loading,

@@ -6,10 +6,11 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, onSnapshot, query, orderBy, getDocs, writeBatch, doc, updateDoc } from "firebase/firestore";
+import { onSnapshot, query, orderBy, getDocs, writeBatch, doc, updateDoc } from "firebase/firestore";
 import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { FIRESTORE_COLLECTIONS, getUserCollection, getUserDoc } from "@/lib/firestore-collections";
 import { Meal, MealOption } from "@/types/meal";
+import { useAuth } from "@/hooks/useAuth";
 
 const DEFAULT_MEALS: Meal[] = [
   {
@@ -71,12 +72,19 @@ const DEFAULT_MEALS: Meal[] = [
  * @returns An object containing the list of meals, loading state, and CRUD utilities.
  */
 export function useMeals() {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [mealsList, setMealsList] = useState<Meal[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Sync meals from Firestore
   useEffect(() => {
-    const mealsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.MEALS);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const mealsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.MEALS);
     const sortedMealsQuery = query(mealsCollection, orderBy("order", "asc"));
 
     const unsubscribeFromMeals = onSnapshot(sortedMealsQuery, (querySnapshot) => {
@@ -92,14 +100,15 @@ export function useMeals() {
     });
 
     return () => unsubscribeFromMeals();
-  }, []);
+  }, [userId]);
 
   /**
    * @description Auto-seeds default meals from the vegetarian bulk plan if empty.
    */
   const seedMealsIfEmpty = useCallback(async (): Promise<void> => {
+    if (!userId) return;
     try {
-      const mealsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.MEALS);
+      const mealsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.MEALS);
       const querySnapshot = await getDocs(mealsCollection);
 
       let needsReseed = querySnapshot.empty;
@@ -145,7 +154,7 @@ export function useMeals() {
     } catch (seedingError) {
       console.error("Failed to seed default meals:", seedingError);
     }
-  }, []);
+  }, [userId]);
 
   /**
    * @description Adds a new meal section.
@@ -156,7 +165,8 @@ export function useMeals() {
     targetCalories: number,
     targetProtein: number
   ): Promise<void> => {
-    const mealsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.MEALS);
+    if (!userId) throw new Error("Unauthenticated user");
+    const mealsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.MEALS);
     const nextOrder = mealsList.length > 0 ? Math.max(...mealsList.map((m) => m.order)) + 1 : 1;
     const documentId = `meal_${Date.now()}`;
     const documentReference = doc(mealsCollection, documentId);
@@ -183,7 +193,8 @@ export function useMeals() {
     targetCalories: number,
     targetProtein: number
   ): Promise<void> => {
-    const documentReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.MEALS, mealId);
+    if (!userId) throw new Error("Unauthenticated user");
+    const documentReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.MEALS, mealId);
     await updateDoc(documentReference, {
       name,
       timeRange,
@@ -196,8 +207,9 @@ export function useMeals() {
    * @description Deletes a meal section.
    */
   const deleteMealSection = async (mealId: string): Promise<void> => {
-    const documentReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.MEALS, mealId);
-    const mealsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.MEALS);
+    if (!userId) throw new Error("Unauthenticated user");
+    const documentReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.MEALS, mealId);
+    const mealsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.MEALS);
     const writeBatchInstance = writeBatch(firestoreDb);
 
     writeBatchInstance.delete(documentReference);
@@ -222,6 +234,7 @@ export function useMeals() {
     calories: number,
     protein: number
   ): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     const targetMeal = mealsList.find((m) => m.id === mealId);
     if (!targetMeal) throw new Error("Meal section not found");
 
@@ -233,7 +246,7 @@ export function useMeals() {
       protein,
     };
 
-    const documentReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.MEALS, mealId);
+    const documentReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.MEALS, mealId);
     await updateDoc(documentReference, {
       options: [...targetMeal.options, newOption],
     });
@@ -250,6 +263,7 @@ export function useMeals() {
     calories: number,
     protein: number
   ): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     const targetMeal = mealsList.find((m) => m.id === mealId);
     if (!targetMeal) throw new Error("Meal section not found");
 
@@ -257,7 +271,7 @@ export function useMeals() {
       opt.id === optionId ? { ...opt, name, content, calories, protein } : opt
     );
 
-    const documentReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.MEALS, mealId);
+    const documentReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.MEALS, mealId);
     await updateDoc(documentReference, {
       options: updatedOptions,
     });
@@ -267,12 +281,13 @@ export function useMeals() {
    * @description Deletes a meal option.
    */
   const deleteMealOption = async (mealId: string, optionId: string): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     const targetMeal = mealsList.find((m) => m.id === mealId);
     if (!targetMeal) throw new Error("Meal section not found");
 
     const filteredOptions = targetMeal.options.filter((opt) => opt.id !== optionId);
 
-    const documentReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.MEALS, mealId);
+    const documentReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.MEALS, mealId);
     await updateDoc(documentReference, {
       options: filteredOptions,
     });

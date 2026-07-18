@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut } from "firebase/auth";
+import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase";
 
 /**
@@ -16,6 +16,7 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (emailAddress: string, passwordText: string) => Promise<void>;
+  signup: (emailAddress: string, passwordText: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -57,6 +58,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   };
 
   /**
+   * @description Creates a new user account with email and password.
+   * @param {string} emailAddress - The user's email address.
+   * @param {string} passwordText - The user's plaintext password.
+   * @returns {Promise<void>} Resolves when user creation succeeds.
+   * @throws {Error} Throws if account creation fails.
+   */
+  const signup = async (emailAddress: string, passwordText: string): Promise<void> => {
+    try {
+      await createUserWithEmailAndPassword(firebaseAuth, emailAddress, passwordText);
+    } catch (authError) {
+      console.error("Sign up failed:", authError);
+      throw authError;
+    }
+  };
+
+  /**
    * @description Logs the current user out.
    * @returns {Promise<void>} Resolves when sign out is complete.
    * @throws {Error} Throws if Firebase logout fails.
@@ -74,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     user: currentUser,
     loading: loadingState,
     login,
+    signup,
     logout,
   };
 

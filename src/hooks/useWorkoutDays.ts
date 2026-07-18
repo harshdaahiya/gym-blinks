@@ -6,11 +6,12 @@
  * Includes auto-seeding logic for first-time runs.
  */
 
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, getDocs, writeBatch, doc } from "firebase/firestore";
+import { useEffect, useState, useCallback } from "react";
+import { onSnapshot, query, orderBy, getDocs, writeBatch, doc } from "firebase/firestore";
 import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { FIRESTORE_COLLECTIONS, getUserCollection } from "@/lib/firestore-collections";
 import { WorkoutDay } from "@/types/exercise";
+import { useAuth } from "@/hooks/useAuth";
 
 const DEFAULT_WORKOUT_DAYS: WorkoutDay[] = [
   { id: "chest_shoulders", name: "Chest & Shoulders", order: 1 },
@@ -24,12 +25,20 @@ const DEFAULT_WORKOUT_DAYS: WorkoutDay[] = [
  * @returns {Object} An object containing the list of workout days, loading state, and seed function.
  */
 export function useWorkoutDays() {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Sync workout days from Firestore
   useEffect(() => {
-    const workoutDaysCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_DAYS);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const workoutDaysCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_DAYS);
     const sortedWorkoutDaysQuery = query(workoutDaysCollection, orderBy("order", "asc"));
 
     const unsubscribeFromWorkoutDays = onSnapshot(sortedWorkoutDaysQuery, (querySnapshot) => {
@@ -45,7 +54,7 @@ export function useWorkoutDays() {
     });
 
     return () => unsubscribeFromWorkoutDays();
-  }, []);
+  }, [userId]);
 
   /**
    * @description Checks if the workoutDays collection is empty and seeds it if necessary.
@@ -53,9 +62,11 @@ export function useWorkoutDays() {
    * @returns {Promise<void>} Resolves when the check and seeding operations are complete.
    * @throws {Error} Throws if Firestore batch write fails.
    */
-  const seedWorkoutDaysIfEmpty = async (): Promise<void> => {
+  const seedWorkoutDaysIfEmpty = useCallback(async (): Promise<void> => {
+    if (!userId) return;
+
     try {
-      const workoutDaysCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_DAYS);
+      const workoutDaysCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_DAYS);
       const querySnapshot = await getDocs(workoutDaysCollection);
 
       const validDocumentIds = DEFAULT_WORKOUT_DAYS.map((dayItem) => dayItem.id);
@@ -89,7 +100,7 @@ export function useWorkoutDays() {
       console.error("Failed to seed default workout days:", seedingError);
       throw seedingError;
     }
-  };
+  }, [userId]);
 
   return {
     workoutDays,

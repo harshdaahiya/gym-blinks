@@ -8,21 +8,19 @@
 
 import { useEffect, useState } from "react";
 import {
-  collection,
   onSnapshot,
   query,
   orderBy,
   addDoc,
   updateDoc,
   deleteDoc,
-  doc,
   getDoc,
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { FIRESTORE_COLLECTIONS, getUserCollection, getUserDoc } from "@/lib/firestore-collections";
 import { WorkoutLog, ExerciseEntry, PersonalRecord } from "@/types/workout-log";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Details of a newly achieved Personal Record (PR).
@@ -40,11 +38,19 @@ export interface NewlyAchievedPR {
  * @returns {Object} Logs array, loading state, and CRUD helper methods.
  */
 export function useWorkoutLogs() {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   const [workoutLogsList, setWorkoutLogsList] = useState<WorkoutLog[]>([]);
   const [loadingState, setLoadingState] = useState<boolean>(true);
 
   useEffect(() => {
-    const logsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
+    if (!userId) {
+      setLoadingState(false);
+      return;
+    }
+
+    const logsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
     const sortedLogsQuery = query(logsCollection, orderBy("date", "desc"), orderBy("createdAt", "desc"));
 
     const unsubscribeFromLogs = onSnapshot(sortedLogsQuery, (querySnapshot) => {
@@ -60,7 +66,7 @@ export function useWorkoutLogs() {
     });
 
     return () => unsubscribeFromLogs();
-  }, []);
+  }, [userId]);
 
   /**
    * @description Internal helper to update personal records for any set exceeding previous max.
@@ -72,6 +78,7 @@ export function useWorkoutLogs() {
     dateString: string,
     exerciseEntriesList: ExerciseEntry[]
   ): Promise<NewlyAchievedPR[]> => {
+    if (!userId) return [];
     const newlyAchievedPRsList: NewlyAchievedPR[] = [];
 
     for (let exerciseIndex = 0; exerciseIndex < exerciseEntriesList.length; exerciseIndex++) {
@@ -95,8 +102,8 @@ export function useWorkoutLogs() {
       }
 
       // Check current PR from Firestore
-      const personalRecordDocReference = doc(
-        firestoreDb,
+      const personalRecordDocReference = getUserDoc(
+        userId,
         FIRESTORE_COLLECTIONS.PERSONAL_RECORDS,
         exerciseId
       );
@@ -142,8 +149,9 @@ export function useWorkoutLogs() {
   const addWorkoutLog = async (
     logDetails: Omit<WorkoutLog, "id" | "createdAt">
   ): Promise<{ logId: string; newPRs: NewlyAchievedPR[] }> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const logsCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
+      const logsCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS);
       const newDocReference = await addDoc(logsCollection, {
         date: logDetails.date,
         dayId: logDetails.dayId,
@@ -176,10 +184,11 @@ export function useWorkoutLogs() {
     logId: string,
     updatedFields: Partial<WorkoutLog>
   ): Promise<NewlyAchievedPR[]> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const logDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS, logId);
+      const logDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS, logId);
       
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, unknown> = {};
       if (updatedFields.date !== undefined) updatePayload.date = updatedFields.date;
       if (updatedFields.dayId !== undefined) updatePayload.dayId = updatedFields.dayId;
       if (updatedFields.entries !== undefined) updatePayload.entries = updatedFields.entries;
@@ -206,8 +215,9 @@ export function useWorkoutLogs() {
    * @throws {Error} Throws if deleting from Firestore fails.
    */
   const deleteWorkoutLog = async (logId: string): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const logDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.WORKOUT_LOGS, logId);
+      const logDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.WORKOUT_LOGS, logId);
       await deleteDoc(logDocReference);
     } catch (deleteError) {
       console.error("Failed to delete workout log:", deleteError);

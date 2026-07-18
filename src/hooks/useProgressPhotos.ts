@@ -7,29 +7,35 @@
 
 import { useEffect, useState } from "react";
 import {
-  collection,
   onSnapshot,
   query,
   orderBy,
   addDoc,
   deleteDoc,
-  doc,
   serverTimestamp,
 } from "firebase/firestore";
-import { firestoreDb } from "@/lib/firebase";
-import { FIRESTORE_COLLECTIONS } from "@/lib/firestore-collections";
+import { FIRESTORE_COLLECTIONS, getUserCollection, getUserDoc } from "@/lib/firestore-collections";
 import { ProgressPhoto } from "@/types/progress-photo";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * @description Custom hook for managing progress photos stored as Base64 strings in Firestore.
  * @returns {Object} Photos list, loading state, and mutate functions.
  */
 export function useProgressPhotos() {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   const [photosList, setPhotosList] = useState<ProgressPhoto[]>([]);
   const [loadingState, setLoadingState] = useState<boolean>(true);
 
   useEffect(() => {
-    const photosCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS);
+    if (!userId) {
+      setLoadingState(false);
+      return;
+    }
+
+    const photosCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS);
     const sortedPhotosQuery = query(photosCollection, orderBy("date", "desc"), orderBy("createdAt", "desc"));
 
     const unsubscribeFromPhotos = onSnapshot(sortedPhotosQuery, (querySnapshot) => {
@@ -45,7 +51,7 @@ export function useProgressPhotos() {
     });
 
     return () => unsubscribeFromPhotos();
-  }, []);
+  }, [userId]);
 
   /**
    * @description Adds a new progress photo.
@@ -60,8 +66,9 @@ export function useProgressPhotos() {
     base64DataUrl: string,
     noteText: string | null
   ): Promise<string> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const photosCollection = collection(firestoreDb, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS);
+      const photosCollection = getUserCollection(userId, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS);
       const newDocReference = await addDoc(photosCollection, {
         date: dateString,
         imageUrl: base64DataUrl, // Saved directly to Firestore document
@@ -82,8 +89,9 @@ export function useProgressPhotos() {
    * @throws {Error} Throws if deleting from Firestore fails.
    */
   const deleteProgressPhoto = async (photoId: string): Promise<void> => {
+    if (!userId) throw new Error("Unauthenticated user");
     try {
-      const photoDocReference = doc(firestoreDb, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS, photoId);
+      const photoDocReference = getUserDoc(userId, FIRESTORE_COLLECTIONS.PROGRESS_PHOTOS, photoId);
       await deleteDoc(photoDocReference);
     } catch (deleteError) {
       console.error("Failed to delete progress photo:", deleteError);

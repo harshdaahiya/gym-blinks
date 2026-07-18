@@ -19,14 +19,15 @@ import { Dumbbell } from "lucide-react";
  * @returns {React.ReactElement} The Login page.
  */
 export default function LoginPage(): React.ReactElement {
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const router = useRouter();
   const [emailAddress, setEmailAddress] = useState<string>("");
   const [passwordText, setPasswordText] = useState<string>("");
+  const [isSignUp, setIsSignUp] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   /**
-   * @description Handles form submission and triggers Firebase Authentication.
+   * @description Handles form submission and triggers Firebase Authentication (Login or Sign Up).
    * @param {React.FormEvent} formEvent - Form submission event.
    */
   const handleFormSubmission = async (formEvent: React.FormEvent): Promise<void> => {
@@ -39,8 +40,13 @@ export default function LoginPage(): React.ReactElement {
 
     setSubmitting(true);
     try {
-      await login(emailAddress, passwordText);
-      toast.success("Welcome back!");
+      if (isSignUp) {
+        await signup(emailAddress, passwordText);
+        toast.success("Account created successfully!");
+      } else {
+        await login(emailAddress, passwordText);
+        toast.success("Welcome back!");
+      }
       router.replace("/");
     } catch (authError: any) {
       console.error("Sign in error:", authError);
@@ -64,8 +70,8 @@ export default function LoginPage(): React.ReactElement {
           { className: "flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 transition-transform duration-300 hover:scale-105" },
           React.createElement(Dumbbell, { className: "h-7 w-7" })
         ),
-        React.createElement("h2", { className: "text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl" }, "Sign In"),
-        React.createElement("p", { className: "mt-3 text-xs sm:text-sm text-muted-foreground max-w-xs mx-auto" }, "Access your gym dashboard and track progressive overload.")
+        React.createElement("h2", { className: "text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl" }, isSignUp ? "Create Account" : "Sign In"),
+        React.createElement("p", { className: "mt-3 text-xs sm:text-sm text-muted-foreground max-w-xs mx-auto" }, isSignUp ? "Start tracking your workouts, progression, and diet today." : "Access your gym dashboard and track progressive overload.")
       ),
       React.createElement(
         "form",
@@ -114,7 +120,21 @@ export default function LoginPage(): React.ReactElement {
               disabled: submitting,
               className: "w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 text-xs sm:text-sm font-semibold shadow-sm transition-all",
             },
-            submitting ? "Signing In..." : "Sign In"
+            submitting ? (isSignUp ? "Creating Account..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")
+          ),
+          React.createElement(
+            "div",
+            { className: "text-center text-xs text-muted-foreground mt-4" },
+            isSignUp ? "Already have an account? " : "New to GymBlinks? ",
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsSignUp(!isSignUp),
+                className: "underline text-primary font-semibold hover:text-primary/95 focus:outline-none cursor-pointer",
+              },
+              isSignUp ? "Sign In" : "Create Account"
+            )
           )
         )
       )
