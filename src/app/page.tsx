@@ -90,6 +90,34 @@ export default function HomePage(): React.ReactElement {
     calendarGridDaysList.push(dayNumber);
   }
 
+  // Calculate month statistics (workouts, rest days, missed days) up to today
+  const todayDate = new Date();
+  const todayDayNumber = todayDate.getDate();
+  const isCurrentMonth = todayDate.getFullYear() === currentYearNumber && todayDate.getMonth() === currentMonthNumber;
+  const limitDayNumber = isCurrentMonth ? todayDayNumber : totalDaysInCurrentMonth;
+
+  let workoutsCount = 0;
+  let restDaysCount = 0;
+  let missedDaysCount = 0;
+
+  for (let dayNumber = 1; dayNumber <= limitDayNumber; dayNumber++) {
+    const dayDateString = `${currentYearNumber}-${String(currentMonthNumber + 1).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+    const isDayLogged = activeWorkoutDatesSet.has(dayDateString);
+    const dateObject = new Date(currentYearNumber, currentMonthNumber, dayNumber);
+    const isSunday = dateObject.getDay() === 0;
+
+    if (isDayLogged) {
+      workoutsCount++;
+    } else if (isSunday) {
+      restDaysCount++;
+    } else {
+      // If it's today and not logged yet, don't count it as missed
+      if (!(isCurrentMonth && dayNumber === todayDayNumber)) {
+        missedDaysCount++;
+      }
+    }
+  }
+
   /**
    * @description Toggle expansion state for a historical workout log card.
    * @param {string} logId - The ID of the log card.
@@ -326,6 +354,8 @@ export default function HomePage(): React.ReactElement {
                     const dayDateString = `${currentYearNumber}-${String(currentMonthNumber + 1).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
                     const isDayLogged = activeWorkoutDatesSet.has(dayDateString);
                     const isDayToday = localTodayDateString === dayDateString;
+                    const dateObject = new Date(currentYearNumber, currentMonthNumber, dayNumber);
+                    const isSunday = dateObject.getDay() === 0;
 
                     return React.createElement(
                       "div",
@@ -337,13 +367,41 @@ export default function HomePage(): React.ReactElement {
                             ? "bg-primary text-primary-foreground font-semibold shadow-sm"
                             : isDayToday
                             ? "border border-primary text-foreground font-medium"
+                            : isSunday
+                            ? "border border-dashed border-muted-foreground/30 bg-muted/5 text-muted-foreground/60"
                             : "bg-muted/20 text-muted-foreground hover:bg-muted/40"
                         ),
-                        title: isDayLogged ? `Workout logged on ${dayDateString}` : dayDateString,
+                        title: isDayLogged
+                          ? `Workout logged on ${dayDateString}`
+                          : isSunday
+                          ? `Rest Day (${dayDateString})`
+                          : dayDateString,
                       },
                       dayNumber
                     );
                   })
+                ),
+                React.createElement(
+                  "div",
+                  { className: "flex justify-around items-center pt-3 border-t border-border/50 text-[10px] sm:text-[11px] text-muted-foreground" },
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-1.5" },
+                    React.createElement("div", { className: "h-2 w-2 rounded-full bg-primary" }),
+                    React.createElement("span", null, `${workoutsCount} Workouts`)
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-1.5" },
+                    React.createElement("div", { className: "h-2 w-2 rounded-full border border-dashed border-muted-foreground/40 bg-muted/5" }),
+                    React.createElement("span", null, `${restDaysCount} Rest Days`)
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-1.5" },
+                    React.createElement("div", { className: "h-2 w-2 rounded-full bg-muted/30" }),
+                    React.createElement("span", null, `${missedDaysCount} Missed`)
+                  )
                 )
               )
             : React.createElement(
