@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs'
 import { useWorkoutDays } from '@/hooks/useWorkoutDays'
 import { PageShell } from '@/components/layout/PageShell'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { getLocalDateString, cn } from '@/lib/utils'
@@ -29,23 +29,6 @@ export default function HomePage(): React.ReactElement {
 
   // Keep track of which past log IDs are expanded in the history list
   const [expandedLogIds, setExpandedLogIds] = useState<Record<string, boolean>>({})
-
-  // Collapsed state for dashboard cards. Default: all are open (false).
-  const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({
-    todaysStatus: false,
-    consistency: false
-  })
-
-  /**
-   * @description Toggles the collapse state of a dashboard card.
-   * @param {string} cardKey - Identifier of the card.
-   */
-  const toggleCardCollapse = (cardKey: string): void => {
-    setCollapsedCards((prevCollapsed) => ({
-      ...prevCollapsed,
-      [cardKey]: !prevCollapsed[cardKey]
-    }))
-  }
 
   const localTodayDateString = getLocalDateString()
   const todaysWorkoutLog = workoutLogs.find((logItem) => logItem.date === localTodayDateString)
@@ -194,114 +177,136 @@ export default function HomePage(): React.ReactElement {
       { className: 'space-y-6' },
       React.createElement(
         Card,
-        { className: 'border-border bg-card shadow-none' },
+        { className: 'border-border bg-card shadow-none overflow-hidden relative' },
+        React.createElement('div', {
+          className: cn(
+            'absolute top-0 left-0 w-1 h-full',
+            todaysWorkoutLog ? 'bg-primary' : 'bg-muted-foreground/20'
+          )
+        }),
         React.createElement(
           'div',
-          {
-            onClick: () => toggleCardCollapse('todaysStatus'),
-            className: 'flex items-center justify-between p-4 cursor-pointer select-none border-b border-border/50'
-          },
+          { className: 'p-4 flex flex-col gap-3' },
           React.createElement(
             'div',
-            { className: 'flex items-center gap-2' },
-            React.createElement(collapsedCards.todaysStatus ? ChevronDown : ChevronUp, { className: 'h-4 w-4 text-muted-foreground shrink-0' }),
-            React.createElement('span', { className: 'text-sm font-semibold text-muted-foreground uppercase tracking-wider' }, "Today's Status")
-          ),
-          todaysWorkoutLog && React.createElement(Badge, { variant: 'outline', className: 'border-primary/30 text-primary text-[10px]' }, 'Completed')
-        ),
-        !collapsedCards.todaysStatus &&
-          React.createElement(
-            CardContent,
-            { className: 'pt-4 pb-4 space-y-4' },
+            { className: 'flex items-center justify-between' },
+            React.createElement(
+              'span',
+              { className: 'text-[10px] font-bold text-muted-foreground uppercase tracking-wider' },
+              "Today's Status"
+            ),
             todaysWorkoutLog
-              ? React.createElement(
+              ? React.createElement(Badge, { variant: 'outline', className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold' }, 'Completed')
+              : React.createElement(Badge, { variant: 'outline', className: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-semibold' }, 'Pending')
+          ),
+          todaysWorkoutLog
+            ? React.createElement(
+                'div',
+                { className: 'space-y-4' },
+                React.createElement(
                   'div',
-                  { className: 'space-y-3' },
+                  { className: 'flex items-center justify-between gap-3' },
                   React.createElement(
                     'div',
-                    { className: 'flex items-center justify-between' },
+                    null,
                     React.createElement('h4', { className: 'text-base font-bold text-foreground' }, getWorkoutDayName(todaysWorkoutLog.dayId)),
                     React.createElement(
-                      Link,
-                      { href: `/log/${todaysWorkoutLog.id}`, className: 'text-xs text-muted-foreground hover:text-foreground flex items-center gap-1' },
-                      React.createElement(Edit2, { className: 'h-3.5 w-3.5' }),
-                      'Edit'
+                      'p',
+                      { className: 'text-xs text-muted-foreground mt-0.5' },
+                      'Nice job! You completed your workout today.'
                     )
                   ),
                   React.createElement(
-                    'p',
-                    { className: 'text-xs text-muted-foreground' },
-                    todaysWorkoutLog.entries.length,
-                    ' exercises performed • ',
-                    todaysWorkoutLog.entries.reduce((totalSetsCount, currentExercise) => totalSetsCount + currentExercise.sets.length, 0),
-                    ' total sets'
-                  ),
-                  React.createElement(
-                    'ul',
-                    { className: 'space-y-1.5 list-disc list-inside text-sm text-muted-foreground border-t border-border/50 pt-3' },
-                    todaysWorkoutLog.entries
-                      .slice(0, 3)
-                      .map((exerciseEntryItem) =>
-                        React.createElement(
-                          'li',
-                          { key: exerciseEntryItem.exerciseId, className: 'truncate' },
-                          exerciseEntryItem.exerciseName,
-                          ': ',
-                          exerciseEntryItem.sets.length,
-                          ' sets'
-                        )
-                      ),
-                    todaysWorkoutLog.entries.length > 3 &&
-                      React.createElement('li', { className: 'list-none italic text-xs pt-1' }, '+ ', todaysWorkoutLog.entries.length - 3, ' more exercises')
+                    Link,
+                    {
+                      href: `/log/${todaysWorkoutLog.id}`,
+                      className: 'h-8 px-3 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-semibold flex items-center gap-1 transition-all'
+                    },
+                    React.createElement(Edit2, { className: 'h-3 w-3' }),
+                    'Edit Log'
                   )
-                )
-              : React.createElement(
+                ),
+                React.createElement(
                   'div',
-                  { className: 'flex flex-col gap-4 text-center py-4 px-4 border border-dashed rounded-lg bg-card/50' },
+                  { className: 'grid grid-cols-2 gap-3 border-t border-b border-border/40 py-3 bg-muted/5 rounded-md px-2' },
                   React.createElement(
                     'div',
-                    { className: 'mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground' },
-                    React.createElement(Clipboard, { className: 'h-5 w-5' })
+                    { className: 'text-center' },
+                    React.createElement('p', { className: 'text-[10px] uppercase font-bold text-muted-foreground' }, 'Exercises'),
+                    React.createElement('p', { className: 'text-lg font-extrabold text-foreground' }, todaysWorkoutLog.entries.length)
                   ),
                   React.createElement(
                     'div',
-                    { className: 'space-y-1' },
-                    React.createElement('h2', { className: 'font-semibold text-sm' }, 'No workout logged today'),
+                    { className: 'text-center' },
+                    React.createElement('p', { className: 'text-[10px] uppercase font-bold text-muted-foreground' }, 'Total Sets'),
                     React.createElement(
                       'p',
-                      { className: 'text-xs text-muted-foreground max-w-[240px] mx-auto' },
-                      'Track your progressive overload and stay consistent.'
+                      { className: 'text-lg font-extrabold text-foreground' },
+                      todaysWorkoutLog.entries.reduce((totalSetsCount, currentExercise) => totalSetsCount + currentExercise.sets.length, 0)
                     )
-                  ),
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'space-y-2' },
+                  React.createElement('p', { className: 'text-[9px] uppercase font-bold text-muted-foreground px-0.5' }, 'Exercises performed'),
                   React.createElement(
-                    Button,
-                    {
-                      onClick: () => router.push('/log/new'),
-                      className: 'w-full mt-2 flex items-center justify-center gap-2'
-                    },
-                    React.createElement(Plus, { className: 'h-4 w-4' }),
-                    "Log Today's Workout"
+                    'div',
+                    { className: 'flex flex-wrap gap-1.5' },
+                    todaysWorkoutLog.entries.map((exerciseEntryItem) =>
+                      React.createElement(
+                        Badge,
+                        {
+                          key: exerciseEntryItem.exerciseId,
+                          variant: 'outline',
+                          className: 'bg-muted/10 border-border/80 text-[10px] py-0.5 font-medium'
+                        },
+                        `${exerciseEntryItem.exerciseName} (${exerciseEntryItem.sets.length} sets)`
+                      )
+                    )
                   )
                 )
-          )
+              )
+            : React.createElement(
+                'div',
+                { className: 'flex flex-col sm:flex-row items-center gap-4 py-2 px-3 border border-dashed rounded-lg bg-muted/5' },
+                React.createElement(
+                  'div',
+                  { className: 'h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0' },
+                  React.createElement(Clipboard, { className: 'h-5 w-5' })
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'flex-1 text-center sm:text-left space-y-0.5 min-w-0' },
+                  React.createElement('h4', { className: 'text-xs font-bold text-foreground' }, 'No workout logged today'),
+                  React.createElement('p', { className: 'text-[10px] text-muted-foreground' }, 'Track your progressive overload and stay consistent.')
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    onClick: () => router.push('/log/new'),
+                    size: 'sm',
+                    className: 'w-full sm:w-auto h-8 text-xs font-semibold shrink-0 gap-1'
+                  },
+                  React.createElement(Plus, { className: 'h-3.5 w-3.5 text-primary-foreground' }),
+                  'Log Workout'
+                )
+              )
+        )
       ),
       React.createElement(
         Card,
         { className: 'border-border bg-card shadow-none' },
         React.createElement(
-          CardHeader,
-          { className: 'pb-4 flex flex-row items-center justify-between space-y-0' },
+          'div',
+          { className: 'p-4 pb-0 flex flex-col gap-3' },
           React.createElement(
             'div',
-            {
-              onClick: () => toggleCardCollapse('consistency'),
-              className: 'flex items-center gap-2 cursor-pointer select-none py-1 flex-1'
-            },
-            React.createElement(collapsedCards.consistency ? ChevronDown : ChevronUp, { className: 'h-4 w-4 text-muted-foreground shrink-0' }),
+            { className: 'flex items-center justify-between' },
             React.createElement(
               'div',
-              { className: 'space-y-1' },
-              React.createElement(CardTitle, { className: 'text-sm font-semibold text-muted-foreground uppercase tracking-wider' }, 'Consistency'),
+              { className: 'space-y-0.5' },
+              React.createElement('h3', { className: 'text-sm font-semibold text-muted-foreground uppercase tracking-wider' }, 'Consistency'),
               React.createElement(
                 'p',
                 { className: 'text-xs text-muted-foreground font-medium' },
@@ -309,149 +314,152 @@ export default function HomePage(): React.ReactElement {
                   ? `${activeDaysThisMonthCount} workouts in ${currentMonthLabel}`
                   : `${activeDaysThisYearCount} workouts in ${currentYearNumber}`
               )
-            )
-          ),
-          React.createElement(
-            'div',
-            { className: 'flex border rounded-md overflow-hidden bg-background shrink-0 ml-4' },
-            React.createElement(
-              'button',
-              {
-                onClick: (event) => {
-                  event.stopPropagation()
-                  setConsistencyView('month')
-                },
-                className: cn(
-                  'px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer',
-                  consistencyView === 'month' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                )
-              },
-              'Month'
             ),
             React.createElement(
-              'button',
-              {
-                onClick: (event) => {
-                  event.stopPropagation()
-                  setConsistencyView('year')
+              'div',
+              { className: 'flex border rounded-md overflow-hidden bg-background shrink-0 text-xs' },
+              React.createElement(
+                'button',
+                {
+                  onClick: () => setConsistencyView('month'),
+                  className: cn(
+                    'px-2.5 py-1 font-medium transition-all cursor-pointer',
+                    consistencyView === 'month' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  )
                 },
-                className: cn(
-                  'px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer',
-                  consistencyView === 'year' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                )
-              },
-              'Year'
+                'Month'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => setConsistencyView('year'),
+                  className: cn(
+                    'px-2.5 py-1 font-medium transition-all cursor-pointer',
+                    consistencyView === 'year' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  )
+                },
+                'Year'
+              )
             )
           )
         ),
-        !collapsedCards.consistency &&
-          React.createElement(
-            CardContent,
-            { className: 'pt-0 pb-5' },
-            consistencyView === 'month'
-              ? React.createElement(
+        React.createElement(
+          CardContent,
+          { className: 'pt-4 pb-4' },
+          consistencyView === 'month'
+            ? React.createElement(
+                'div',
+                { className: 'space-y-4' },
+                React.createElement(
                   'div',
-                  { className: 'space-y-3' },
-                  React.createElement(
-                    'div',
-                    { className: 'grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-muted-foreground' },
-                    ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((weekdayAbbreviation, index) => React.createElement('div', { key: index }, weekdayAbbreviation))
-                  ),
-                  React.createElement(
-                    'div',
-                    { className: 'grid grid-cols-7 gap-1.5 justify-items-center' },
-                    calendarGridDaysList.map((dayNumber, index) => {
-                      if (dayNumber === null) {
-                        return React.createElement('div', { key: `empty-${index}`, className: 'h-7 w-7' })
-                      }
-
-                      const dayDateString = `${currentYearNumber}-${String(currentMonthNumber + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`
-                      const isDayLogged = activeWorkoutDatesSet.has(dayDateString)
-                      const isDayToday = localTodayDateString === dayDateString
-                      const dateObject = new Date(currentYearNumber, currentMonthNumber, dayNumber)
-                      const isSunday = dateObject.getDay() === 0
-
-                      return React.createElement(
-                        'div',
-                        {
-                          key: dayNumber,
-                          className: cn(
-                            'h-7 w-7 aspect-square flex items-center justify-center text-[10px] rounded-full transition-all',
-                            isDayLogged
-                              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
-                              : isDayToday
-                                ? 'border border-primary text-foreground font-medium'
-                                : isSunday
-                                  ? 'border border-dashed border-muted-foreground/30 bg-muted/5 text-muted-foreground/60'
-                                  : 'bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                          ),
-                          title: isDayLogged ? `Workout logged on ${dayDateString}` : isSunday ? `Rest Day (${dayDateString})` : dayDateString
-                        },
-                        dayNumber
-                      )
-                    })
-                  ),
-                  React.createElement(
-                    'div',
-                    { className: 'flex justify-around items-center pt-3 border-t border-border/50 text-[10px] sm:text-[11px] text-muted-foreground' },
-                    React.createElement(
-                      'div',
-                      { className: 'flex items-center gap-1.5' },
-                      React.createElement('div', { className: 'h-2 w-2 rounded-full bg-primary' }),
-                      React.createElement('span', null, `${workoutsCount} Workouts`)
-                    ),
-                    React.createElement(
-                      'div',
-                      { className: 'flex items-center gap-1.5' },
-                      React.createElement('div', { className: 'h-2 w-2 rounded-full border border-dashed border-muted-foreground/40 bg-muted/5' }),
-                      React.createElement('span', null, `${restDaysCount} Rest Days`)
-                    ),
-                    React.createElement(
-                      'div',
-                      { className: 'flex items-center gap-1.5' },
-                      React.createElement('div', { className: 'h-2 w-2 rounded-full bg-muted/30' }),
-                      React.createElement('span', null, `${missedDaysCount} Missed`)
-                    )
+                  { className: 'grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider' },
+                  ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((weekdayAbbreviation, weekdayIndex) =>
+                    React.createElement('div', { key: weekdayIndex }, weekdayAbbreviation)
                   )
-                )
-              : React.createElement(
+                ),
+                React.createElement(
                   'div',
-                  { className: 'grid grid-cols-3 gap-3' },
-                  Array.from({ length: 12 }).map((_, monthIndex) => {
-                    const monthNameString = new Date(currentYearNumber, monthIndex, 1).toLocaleString('default', { month: 'short' })
-                    const logsInThisMonth = Array.from(activeWorkoutDatesSet).filter((dateString) => {
-                      const dateParts = dateString.split('-')
-                      return parseInt(dateParts[0], 10) === currentYearNumber && parseInt(dateParts[1], 10) === monthIndex + 1
-                    })
-                    const activeDaysInMonthCount = logsInThisMonth.length
-                    const totalDaysInThisMonth = new Date(currentYearNumber, monthIndex + 1, 0).getDate()
-                    const activePercentage = (activeDaysInMonthCount / totalDaysInThisMonth) * 100
+                  { className: 'grid grid-cols-7 gap-1 justify-items-center' },
+                  calendarGridDaysList.map((dayNumber, dayNumberIndex) => {
+                    if (dayNumber === null) {
+                      return React.createElement('div', { key: `empty-${dayNumberIndex}`, className: 'h-8 w-8' })
+                    }
+
+                    const dayDateString = `${currentYearNumber}-${String(currentMonthNumber + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`
+                    const isDayLogged = activeWorkoutDatesSet.has(dayDateString)
+                    const isDayToday = localTodayDateString === dayDateString
+                    const dateObject = new Date(currentYearNumber, currentMonthNumber, dayNumber)
+                    const isSunday = dateObject.getDay() === 0
+
+                    const todayZero = new Date()
+                    todayZero.setHours(0, 0, 0, 0)
+                    const itemDate = new Date(currentYearNumber, currentMonthNumber, dayNumber)
+                    const isPastDay = itemDate < todayZero
+                    const isMissed = isPastDay && !isDayLogged && !isSunday
 
                     return React.createElement(
                       'div',
                       {
-                        key: monthIndex,
-                        className: 'border rounded-md p-2 bg-muted/10 space-y-1 text-center'
+                        key: dayNumber,
+                        className: cn(
+                          'h-8 w-8 aspect-square flex items-center justify-center text-xs rounded-md transition-all cursor-default',
+                          isDayLogged
+                            ? 'bg-primary text-primary-foreground font-bold shadow-sm hover:scale-105'
+                            : isSunday
+                              ? 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 dark:border-emerald-500/30 font-semibold'
+                              : isDayToday
+                                ? 'border-2 border-primary text-foreground font-bold'
+                                : isMissed
+                                  ? 'bg-rose-500/5 text-rose-500/50 border border-rose-500/15'
+                                  : 'bg-muted/10 text-muted-foreground/40 hover:bg-muted/20'
+                        ),
+                        title: isDayLogged ? `Workout logged on ${dayDateString}` : isSunday ? `Rest Day (${dayDateString})` : isMissed ? `Missed (${dayDateString})` : dayDateString
                       },
-                      React.createElement('div', { className: 'text-[11px] font-semibold text-foreground' }, monthNameString),
-                      React.createElement(
-                        'div',
-                        { className: 'text-[10px] text-muted-foreground font-medium' },
-                        activeDaysInMonthCount,
-                        activeDaysInMonthCount === 1 ? ' day' : ' days'
-                      ),
-                      React.createElement(
-                        'div',
-                        { className: 'h-1 w-full bg-muted/50 rounded-full overflow-hidden mt-1.5' },
-                        React.createElement('div', {
-                          className: 'bg-primary h-full rounded-full transition-all duration-500',
-                          style: { width: `${activePercentage}%` }
-                        })
-                      )
+                      dayNumber
                     )
                   })
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'flex justify-around items-center pt-3 border-t border-border/40 text-[10px] sm:text-[11px] text-muted-foreground' },
+                  React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-1.5' },
+                    React.createElement('div', { className: 'h-2.5 w-2.5 rounded-sm bg-primary' }),
+                    React.createElement('span', null, `${workoutsCount} Workouts`)
+                  ),
+                  React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-1.5' },
+                    React.createElement('div', { className: 'h-2.5 w-2.5 rounded-sm bg-emerald-500/10 border border-emerald-500/25' }),
+                    React.createElement('span', null, `${restDaysCount} Rest Days`)
+                  ),
+                  React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-1.5' },
+                    React.createElement('div', { className: 'h-2.5 w-2.5 rounded-sm bg-rose-500/5 border border-rose-500/15' }),
+                    React.createElement('span', null, `${missedDaysCount} Missed`)
+                  )
                 )
-          )
+              )
+            : React.createElement(
+                'div',
+                { className: 'grid grid-cols-3 gap-3' },
+                Array.from({ length: 12 }).map((monthPlaceholder, monthIndex) => {
+                  const monthNameString = new Date(currentYearNumber, monthIndex, 1).toLocaleString('default', { month: 'short' })
+                  const logsInThisMonth = Array.from(activeWorkoutDatesSet).filter((dateString) => {
+                    const dateParts = dateString.split('-')
+                    return parseInt(dateParts[0], 10) === currentYearNumber && parseInt(dateParts[1], 10) === monthIndex + 1
+                  })
+                  const activeDaysInMonthCount = logsInThisMonth.length
+                  const totalDaysInThisMonth = new Date(currentYearNumber, monthIndex + 1, 0).getDate()
+                  const activePercentage = (activeDaysInMonthCount / totalDaysInThisMonth) * 100
+
+                  return React.createElement(
+                    'div',
+                    {
+                      key: monthIndex,
+                      className: 'border rounded-md p-2 bg-muted/10 space-y-1 text-center'
+                    },
+                    React.createElement('div', { className: 'text-[11px] font-semibold text-foreground' }, monthNameString),
+                    React.createElement(
+                      'div',
+                      { className: 'text-[10px] text-muted-foreground font-medium' },
+                      activeDaysInMonthCount,
+                      activeDaysInMonthCount === 1 ? ' day' : ' days'
+                    ),
+                    React.createElement(
+                      'div',
+                      { className: 'h-1 w-full bg-muted/50 rounded-full overflow-hidden mt-1.5' },
+                      React.createElement('div', {
+                        className: 'bg-primary h-full rounded-full transition-all duration-500',
+                        style: { width: `${activePercentage}%` }
+                      })
+                    )
+                  )
+                })
+              )
+        )
       ),
       React.createElement(
         'div',
