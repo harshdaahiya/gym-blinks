@@ -6,7 +6,13 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
+  Firestore
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,20 +29,17 @@ const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : get
 // Initialize Firebase Authentication
 const firebaseAuth = getAuth(firebaseApp);
 
-// Initialize Cloud Firestore Database
-const firestoreDb = getFirestore(firebaseApp);
-
-// Enable offline persistence in the browser environment
-if (typeof window !== "undefined") {
-  enableIndexedDbPersistence(firestoreDb).catch((persistenceError) => {
-    if (persistenceError.code === "failed-precondition") {
-      console.warn("Firestore persistence failed-precondition: Multiple tabs open.");
-    } else if (persistenceError.code === "unimplemented") {
-      console.warn("Firestore persistence unimplemented: Browser does not support persistence.");
-    } else {
-      console.error("Firestore persistence error:", persistenceError);
-    }
-  });
+// Initialize Cloud Firestore Database with persistent multi-tab cache
+let firestoreDb: Firestore;
+try {
+  firestoreDb = initializeFirestore(firebaseApp, {
+    cache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  } as any);
+} catch {
+  // If Firestore has already been initialized (e.g. during Next.js Hot Reloads), retrieve the active instance
+  firestoreDb = getFirestore(firebaseApp);
 }
 
 export { firebaseApp, firebaseAuth, firestoreDb };
