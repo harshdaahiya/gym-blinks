@@ -16,6 +16,7 @@ export const FIRESTORE_COLLECTIONS = {
   PROGRESS_PHOTOS: "progressPhotos",
   PERSONAL_RECORDS: "personalRecords",
   MEALS: "meals",
+  BODY_WEIGHTS: "bodyWeights",
 } as const;
 
 export type FirestoreCollectionName = typeof FIRESTORE_COLLECTIONS[keyof typeof FIRESTORE_COLLECTIONS];
