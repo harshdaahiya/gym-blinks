@@ -25,6 +25,67 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+interface MealTheme {
+  bgClass: string;
+  borderClass: string;
+  accentTextClass: string;
+  badgeBgClass: string;
+  emojis: string[];
+}
+
+const getMealTheme = (mealName: string, order: number): MealTheme => {
+  const normalized = mealName.toLowerCase();
+
+  if (normalized.includes("breakfast") || normalized.includes("meal 1") || order === 1) {
+    return {
+      bgClass: "from-amber-500/10 to-orange-500/5 border-amber-500/20 dark:from-amber-500/15 dark:to-orange-500/5 dark:border-amber-500/30",
+      borderClass: "border-amber-500/20 dark:border-amber-500/30",
+      accentTextClass: "text-amber-600 dark:text-amber-400",
+      badgeBgClass: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+      emojis: ["🥣", "🍌", "🥛"],
+    };
+  }
+
+  if (normalized.includes("lunch") || normalized.includes("meal 2") || order === 2) {
+    return {
+      bgClass: "from-emerald-500/10 to-teal-500/5 border-emerald-500/20 dark:from-emerald-500/15 dark:to-teal-500/5 dark:border-emerald-500/30",
+      borderClass: "border-emerald-500/20 dark:border-emerald-500/30",
+      accentTextClass: "text-emerald-600 dark:text-emerald-400",
+      badgeBgClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+      emojis: ["🍚", "🥦", "🧀"],
+    };
+  }
+
+  if (normalized.includes("snack") || normalized.includes("pre-workout") || normalized.includes("meal 3") || order === 3) {
+    return {
+      bgClass: "from-sky-500/10 to-blue-500/5 border-sky-500/20 dark:from-sky-500/15 dark:to-blue-500/5 dark:border-sky-500/30",
+      borderClass: "border-sky-500/20 dark:border-sky-500/30",
+      accentTextClass: "text-sky-600 dark:text-sky-400",
+      badgeBgClass: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+      emojis: ["🍎", "🥜", "🍞"],
+    };
+  }
+
+  if (normalized.includes("dinner") || normalized.includes("meal 4") || order === 4) {
+    return {
+      bgClass: "from-purple-500/10 to-pink-500/5 border-purple-500/20 dark:from-purple-500/15 dark:to-pink-500/5 dark:border-purple-500/30",
+      borderClass: "border-purple-500/20 dark:border-purple-500/30",
+      accentTextClass: "text-purple-600 dark:text-purple-400",
+      badgeBgClass: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
+      emojis: ["🫓", "🍛", "🥗"],
+    };
+  }
+
+  return {
+    bgClass: "from-rose-500/10 to-pink-500/5 border-rose-500/20 dark:from-rose-500/15 dark:to-pink-500/5 dark:border-rose-500/30",
+    borderClass: "border-rose-500/20 dark:border-rose-500/30",
+    accentTextClass: "text-rose-600 dark:text-rose-400",
+    badgeBgClass: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
+    emojis: ["🥑", "🥗", "🍠"],
+  };
+};
 
 export default function MealsPage(): React.ReactElement {
   const {
@@ -280,7 +341,7 @@ export default function MealsPage(): React.ReactElement {
       // Summary Banner Card
       React.createElement(
         Card,
-        { className: "border-primary bg-card/60 backdrop-blur-sm" },
+        { className: "border-primary bg-card/80 backdrop-blur-sm" },
         React.createElement(
           CardContent,
           { className: "p-4 flex items-center justify-between" },
@@ -324,14 +385,24 @@ export default function MealsPage(): React.ReactElement {
         { className: "space-y-4" },
         meals.map((mealItem) => {
           const isCollapsed = !!collapsedSections[mealItem.id];
+          const theme = getMealTheme(mealItem.name, mealItem.order);
+
           return React.createElement(
             Card,
-            { key: mealItem.id, className: "border-border bg-card shadow-none overflow-hidden" },
+            { key: mealItem.id, className: cn("relative border shadow-none overflow-hidden bg-gradient-to-br transition-all duration-300", theme.bgClass, theme.borderClass) },
+            // Blurred floating background emojis
+            React.createElement(
+              "div",
+              {
+                className: "absolute right-4 top-3 select-none opacity-[0.06] text-5xl filter blur-[1.5px] pointer-events-none transition-transform duration-500 hover:scale-110",
+              },
+              theme.emojis.join(" ")
+            ),
             // Card Header area (Clickable to collapse)
             React.createElement(
               "div",
               {
-                className: "flex items-center justify-between p-4 cursor-pointer select-none border-b border-border/50 bg-muted/10",
+                className: "relative flex items-center justify-between p-4 cursor-pointer select-none border-b border-border/20",
                 onClick: () => toggleSectionCollapse(mealItem.id),
               },
               React.createElement(
@@ -343,7 +414,7 @@ export default function MealsPage(): React.ReactElement {
                   { className: "min-w-0" },
                   React.createElement(
                     "h3",
-                    { className: "text-sm font-semibold text-foreground truncate" },
+                    { className: cn("text-sm font-bold truncate", theme.accentTextClass) },
                     mealItem.name
                   ),
                   React.createElement(
@@ -377,7 +448,7 @@ export default function MealsPage(): React.ReactElement {
                 React.createElement(
                   "div",
                   {
-                    className: "flex items-center gap-1.5 border-l border-border/50 pl-3",
+                    className: "flex items-center gap-1.5 border-l border-border/20 pl-3",
                     onClick: (event) => event.stopPropagation(),
                   },
                   React.createElement(
@@ -410,7 +481,7 @@ export default function MealsPage(): React.ReactElement {
             !isCollapsed &&
               React.createElement(
                 CardContent,
-                { className: "p-4 space-y-4" },
+                { className: "relative p-4 space-y-4 bg-background/20 dark:bg-background/5" },
                 mealItem.options && mealItem.options.length > 0
                   ? React.createElement(
                       "div",
@@ -420,14 +491,14 @@ export default function MealsPage(): React.ReactElement {
                           "div",
                           {
                             key: optionItem.id,
-                            className: "group relative border rounded-md p-3 bg-muted/10 hover:bg-muted/20 transition-all space-y-1.5"
+                            className: "group relative border border-border/30 rounded-md p-3 bg-background/50 hover:bg-background/85 dark:bg-background/25 dark:hover:bg-background/45 transition-all space-y-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
                           },
                           React.createElement(
                             "div",
                             { className: "flex items-center justify-between" },
                             React.createElement(
                               "span",
-                              { className: "text-xs font-bold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded" },
+                              { className: cn("text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-border/20", theme.badgeBgClass) },
                               optionItem.name
                             ),
                             React.createElement(

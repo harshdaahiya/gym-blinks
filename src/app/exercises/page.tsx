@@ -9,7 +9,7 @@ import React, { useState } from 'react'
 import { useExercises } from '@/hooks/useExercises'
 import { useWorkoutDays } from '@/hooks/useWorkoutDays'
 import { PageShell } from '@/components/layout/PageShell'
-import { Card, CardContent } from '@/components/ui/card'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Edit2, Archive, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { Exercise } from '@/types/exercise'
+import { cn } from '@/lib/utils'
 
 /**
  * @description Exercise Manager screen allowing adding, editing, archiving, and restoring exercises.
@@ -206,68 +207,69 @@ export default function ExercisesPage(): React.ReactElement {
                 )
               : React.createElement(
                   'div',
-                  { className: 'space-y-2' },
-                  dayExercises.map((exerciseItem) =>
+                  { className: 'border border-border/80 bg-card rounded-lg overflow-hidden divide-y divide-border/40 shadow-[0_1px_2px_rgba(0,0,0,0.01)]' },
+                  dayExercises.map((exerciseItem, exerciseIndex) =>
                     React.createElement(
-                      Card,
-                      { key: exerciseItem.id, className: 'border-border bg-card shadow-none' },
+                      'div',
+                      { key: exerciseItem.id, className: 'flex items-center justify-between p-2.5 text-xs hover:bg-muted/10 transition-colors group' },
                       React.createElement(
-                        CardContent,
-                        { className: 'p-3 flex items-center justify-between text-sm' },
+                        'div',
+                        { className: 'flex items-center gap-2 min-w-0' },
                         React.createElement(
-                          'div',
-                          { className: 'flex items-center gap-2 min-w-0' },
-                          React.createElement(
-                            'span',
-                            { className: exerciseItem.archived ? 'line-through text-muted-foreground truncate' : 'font-medium truncate' },
-                            exerciseItem.name
-                          ),
-                          exerciseItem.archived &&
-                            React.createElement(Badge, { variant: 'outline', className: 'text-[9px] py-0 px-1 border-muted' }, 'Archived')
+                          'span',
+                          { className: 'text-[10px] text-muted-foreground/50 w-4 font-mono text-center shrink-0' },
+                          exerciseIndex + 1
                         ),
                         React.createElement(
-                          'div',
-                          { className: 'flex items-center gap-1 shrink-0' },
-                          !exerciseItem.archived &&
-                            React.createElement(
-                              React.Fragment,
-                              null,
-                              React.createElement(
-                                Button,
-                                {
-                                  variant: 'ghost',
-                                  size: 'icon',
-                                  onClick: () => openEditModal(exerciseItem),
-                                  className: 'h-7 w-7 text-muted-foreground hover:text-foreground',
-                                  title: 'Edit'
-                                },
-                                React.createElement(Edit2, { className: 'h-3.5 w-3.5' })
-                              ),
-                              React.createElement(
-                                Button,
-                                {
-                                  variant: 'ghost',
-                                  size: 'icon',
-                                  onClick: () => handleArchive(exerciseItem.id),
-                                  className: 'h-7 w-7 text-muted-foreground hover:text-destructive',
-                                  title: 'Archive'
-                                },
-                                React.createElement(Archive, { className: 'h-3.5 w-3.5' })
-                              )
-                            ),
-                          exerciseItem.archived &&
+                          'span',
+                          { className: cn('truncate font-medium text-foreground', exerciseItem.archived && 'line-through text-muted-foreground') },
+                          exerciseItem.name
+                        ),
+                        exerciseItem.archived &&
+                          React.createElement(Badge, { variant: 'outline', className: 'text-[8px] py-0 px-1 border-muted/80 text-muted-foreground' }, 'Archived')
+                      ),
+                      React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1 shrink-0 opacity-80 md:opacity-0 group-hover:opacity-100 transition-opacity' },
+                        !exerciseItem.archived &&
+                          React.createElement(
+                            React.Fragment,
+                            null,
                             React.createElement(
                               Button,
                               {
                                 variant: 'ghost',
                                 size: 'icon',
-                                onClick: () => handleRestore(exerciseItem.id),
-                                className: 'h-7 w-7 text-muted-foreground hover:text-foreground',
-                                title: 'Restore'
+                                onClick: () => openEditModal(exerciseItem),
+                                className: 'h-6 w-6 text-muted-foreground hover:text-foreground',
+                                title: 'Edit'
                               },
-                              React.createElement(RotateCcw, { className: 'h-3.5 w-3.5' })
+                              React.createElement(Edit2, { className: 'h-3 w-3' })
+                            ),
+                            React.createElement(
+                              Button,
+                              {
+                                variant: 'ghost',
+                                size: 'icon',
+                                onClick: () => handleArchive(exerciseItem.id),
+                                className: 'h-6 w-6 text-muted-foreground hover:text-destructive',
+                                title: 'Archive'
+                              },
+                              React.createElement(Archive, { className: 'h-3 w-3' })
                             )
-                        )
+                          ),
+                        exerciseItem.archived &&
+                          React.createElement(
+                            Button,
+                            {
+                              variant: 'ghost',
+                              size: 'icon',
+                              onClick: () => handleRestore(exerciseItem.id),
+                              className: 'h-6 w-6 text-muted-foreground hover:text-foreground',
+                              title: 'Restore'
+                            },
+                            React.createElement(RotateCcw, { className: 'h-3 w-3' })
+                          )
                       )
                     )
                   )
@@ -319,7 +321,11 @@ export default function ExercisesPage(): React.ReactElement {
               React.createElement(
                 SelectTrigger,
                 { className: 'bg-background text-xs' },
-                React.createElement(SelectValue, { placeholder: 'Assign to a day...' })
+                React.createElement(
+                  SelectValue,
+                  { placeholder: 'Assign to a day...' },
+                  workoutDays.find((d) => d.id === exerciseDayId)?.name
+                )
               ),
               React.createElement(
                 SelectContent,

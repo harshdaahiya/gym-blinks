@@ -591,7 +591,11 @@ export function WorkoutForm({ initialLogData, onSave }: WorkoutFormProps): React
               React.createElement(
                 SelectTrigger,
                 { className: "bg-background flex-1 text-xs" },
-                React.createElement(SelectValue, { placeholder: "Select an exercise..." })
+                React.createElement(
+                  SelectValue,
+                  { placeholder: "Select an exercise..." },
+                  exercises.find((e) => e.id === selectedExerciseToAdd)?.name
+                )
               ),
               React.createElement(
                 SelectContent,
@@ -708,7 +712,11 @@ export function WorkoutForm({ initialLogData, onSave }: WorkoutFormProps): React
               React.createElement(
                 SelectTrigger,
                 { className: "bg-background text-xs" },
-                React.createElement(SelectValue, { placeholder: "Assign to a day..." })
+                React.createElement(
+                  SelectValue,
+                  { placeholder: "Assign to a day..." },
+                  workoutDays.find((d) => d.id === newExerciseDayId)?.name
+                )
               ),
               React.createElement(
                 SelectContent,

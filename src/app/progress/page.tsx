@@ -184,7 +184,11 @@ export default function ProgressPage(): React.ReactElement {
               React.createElement(
                 SelectTrigger,
                 { id: "exercise-select", className: "bg-background text-xs" },
-                React.createElement(SelectValue, { placeholder: "Select an exercise..." })
+                React.createElement(
+                  SelectValue,
+                  { placeholder: "Select an exercise..." },
+                  activeExercises.find((e) => e.id === selectedExerciseId)?.name
+                )
               ),
               React.createElement(
                 SelectContent,
